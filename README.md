@@ -21,7 +21,8 @@ Um simulador de investimentos em CDB desenvolvido em **React + TypeScript**, que
 - [Tailwwind](https://tailwindcss.com/)
 
 ## Como acessar:
-- VERCEL
+Acesse o domínio vercel abaixo e experimente:
+- [https://calculo-cdb-one.vercel.app/](https://calculo-cdb-one.vercel.app/)
 
 ## Como funciona
 - Cada fase permite definir um aporte mensal e duração em meses.
