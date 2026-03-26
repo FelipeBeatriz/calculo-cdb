@@ -1,19 +1,22 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Fase = {
-  aporte: number;
-  meses: number;
+  aporte: string;
+  meses: string;
 };
 
 export default function App() {
-  const [taxaAnual] = useState<number>(14.75);
+  const [taxaAnual, setTaxaAnual] = useState<number>(14.75);
+  const [loadingTaxa, setLoadingTaxa] = useState(true);
+  const [erroTaxa, setErroTaxa] = useState(false);
+ 
   const taxaMensal = taxaAnual / 100 / 12;
 
   const [fases, setFases] = useState<Fase[]>([]);
   const [mesesExtra, setMesesExtra] = useState<number>(0);
 
   const adicionarFase = () => {
-    setFases([...fases, { aporte: 0, meses: 0 }]);
+    setFases([...fases, { aporte: "", meses: "" }]);
   };
 
   const removerFase = (index: number) => {
@@ -21,11 +24,7 @@ export default function App() {
     setFases(novasFases);
   };
 
-  const atualizarFase = (
-    index: number,
-    campo: keyof Fase,
-    valor: number
-  ) => {
+  const atualizarFase = (index: number, campo: keyof Fase, valor: string) => {
     const novasFases = [...fases];
     novasFases[index][campo] = valor;
     setFases(novasFases);
@@ -37,9 +36,9 @@ export default function App() {
 
     // Calcula fases
     fases.forEach((fase) => {
-      for (let i = 0; i < fase.meses; i++) {
-        total += fase.aporte;
-        totalInvestido += fase.aporte;
+      for (let i = 0; i < parseInt(fase.meses); i++) {
+        total += parseFloat(fase.aporte);
+        totalInvestido += parseFloat(fase.aporte);
         total *= 1 + taxaMensal;
       }
     });
@@ -64,16 +63,36 @@ export default function App() {
 
   const isValid =
     fases.length > 0 &&
-    fases.every((f) => f.aporte > 0 && f.meses > 0) &&
+    fases.every((f) => parseFloat(f.aporte) > 0 && parseInt(f.meses) > 0) &&
     mesesExtra >= 0;
+
+  // BUSCAR O VALOR DA SELIC ATUAL PARA CALCULAR O RENDIMENTO DO CDB 
+  useEffect(() => {
+    async function fetchSelic() {
+      try {
+        const res = await fetch(
+          "https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json"
+        );
+        const data = await res.json();
+        setTaxaAnual(parseFloat(data[0].valor));
+      } catch {
+        setErroTaxa(true);
+      } finally {
+        setLoadingTaxa(false);
+      }
+    }
+    fetchSelic();
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-12 bg-[#0d1117] text-[#c9d1d9]">
       <div className="bg-[#161b22] p-6 rounded-2xl shadow-lg w-full max-w-md border border-[#30363d]">
         <h1 className="text-xl font-bold mb-4 text-white">Simulador CDB (Multi-fases)</h1>
-        <h3 className="text-md font-semibold mb-4 text-gray-200">
-          Valor da taxa Selic: {taxaAnual}% anual
-        </h3>
+        <div className="text-md font-semibold mb-4 text-gray-200">
+          {loadingTaxa && <span className="text-[#8b949e]">Buscando taxa SELIC...</span>}
+          {erroTaxa && <span className="text-[#f85149]">Erro ao buscar a SELIC.</span>}
+          {!loadingTaxa && !erroTaxa && `Valor da taxa Selic: ${taxaAnual}% anual`}
+        </div>
 
         {fases.length === 0 && (
           <p className="text-[#8b949e] mb-4">
@@ -89,10 +108,8 @@ export default function App() {
             <input
               type="number"
               value={fase.aporte}
-              onChange={(e) =>
-                atualizarFase(index, "aporte", Number(e.target.value))
-              }
-              placeholder="Aporte mensal"
+              onChange={(e) => atualizarFase(index, "aporte", e.target.value)}
+              placeholder="Aporte mensal..."
               className="w-full bg-[#161b22] border border-[#30363d] p-2 rounded mb-2 text-white placeholder-[#8b949e]"
             />
 
@@ -100,10 +117,8 @@ export default function App() {
             <input
               type="number"
               value={fase.meses}
-              onChange={(e) =>
-                atualizarFase(index, "meses", Number(e.target.value))
-              }
-              placeholder="Meses"
+              onChange={(e) => atualizarFase(index, "meses", e.target.value)}
+              placeholder="Quantidade de meses..."
               className="w-full bg-[#161b22] border border-[#30363d] p-2 rounded mb-2 text-white placeholder-[#8b949e]"
             />
 
@@ -120,7 +135,7 @@ export default function App() {
 
         <button
           onClick={adicionarFase}
-          className="w-full bg-[#238636] hover:bg-[#2ea043] text-white p-2 rounded mb-4"
+          className="w-full bg-[#238636] hover:bg-[#2ea043] text-white p-2 rounded mb-4 hover:cursor-pointer hover:scale-105 shadow-sm transition-transform"
         >
           + Adicionar fase
         </button>
